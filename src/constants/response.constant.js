@@ -1,0 +1,15 @@
+"use strict";
+const httpStatusCode = {
+  SUCCESS: 200,
+  CREATED: 201,
+  BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  UNPROCESSABLE_ENTITY: 402,
+  NOT_FOUND: 404,
+  INTERNAL_SERVER_ERROR: 500,
+  ERROR: 500,
+  ACCESS_DENIED: 403,
+  ALREADY_EXITS: 409,
+};
+
+module.exports = { httpStatusCode };

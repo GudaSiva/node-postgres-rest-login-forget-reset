@@ -1,5 +1,5 @@
 const bcrypt = require("bcrypt");
 
-const generateHash = bcrypt.hash(str, 10);
+const generateHash = (str) => bcrypt.hash(str, 10);
 
 module.exports = { generateHash };
