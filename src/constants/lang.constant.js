@@ -5,8 +5,8 @@
   |--------------------------------------------------------------------------
 */
 const langConstants = Object.freeze({
-  locale: ["en", "ar"],
-  default_locale: "en",
+  locale: ["english", "hindi"],
+  default_locale: "english",
 });
 
 module.exports = { langConstants };

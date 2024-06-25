@@ -1,5 +1,11 @@
 const { langConstants } = require("./lang.constant");
-const { httpStatusCode } = require("./response.constant");
+const { httpsStatusCodes } = require("./http-status-response.constant");
 const { userConstants } = require("./user.constants");
+const { httpResponses } = require("./http-response.constant");
 
-module.exports = { userConstants,httpStatusCode,langConstants };
+module.exports = {
+  userConstants,
+  httpsStatusCodes,
+  langConstants,
+  httpResponses,
+};
