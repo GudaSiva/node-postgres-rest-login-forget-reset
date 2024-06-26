@@ -1,3 +1,8 @@
-const { signUp, login } = require("./auth.controller");
+const {
+  signUp,
+  login,
+  forgotPassword,
+  resetPassword,
+} = require("./auth.controller");
 
-module.exports = { signUp, login };
+module.exports = { signUp, login, forgotPassword, resetPassword };

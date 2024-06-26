@@ -9,6 +9,7 @@ const { User, UserToken, ForgetPasswordToken } = require("../models/postgres");
 const { successResponse, errorResponse } = require("../utils/response.util");
 const { jwtConfig } = require("../configs/jwt.config");
 const sendEmail = require("../utils/send-email.util");
+const { comparePassword, generateHash } = require("../utils/password.util");
 const DateFormat = "YYYY-MM-DD HH:mm:ss";
 function dayToInt(day) {
   return parseInt(day, 10);
@@ -62,12 +63,16 @@ const signUp = async (req, res, next) => {
 
 const login = async (req, res, next) => {
   try {
-    const { email } = req.body;
+    const { email, password } = req.body;
     // Generate Unique Tokens
     const tokenUUID = crypto.randomUUID();
     const refreshTokenUUID = crypto.randomUUID();
     const userDetails = await User.findOne({ where: { email } });
-    if (!userDetails) {
+    const comparePasswordString = await comparePassword(
+      password,
+      userDetails.password
+    );
+    if (!userDetails || !comparePasswordString) {
       return res.json(
         errorResponse(
           "INVALID_USER_DETAILS",
@@ -208,7 +213,6 @@ const forgotPassword = async (req, res, next) => {
       )
     );
   } catch (error) {
-    console.log(/error/, error);
     return res.json(
       errorResponse(
         error ? error.message : "SOME_ERR_OCCUR_WHILE_FORGOT_PASSWORD",
@@ -220,4 +224,71 @@ const forgotPassword = async (req, res, next) => {
   }
 };
 
-module.exports = { signUp, login, forgotPassword };
+const resetPassword = async (req, res, next) => {
+  try {
+    const { token, password, confirmPassword } = req.body;
+    // Verify Forgot Password Token
+    const verifyResetToken = await jwt.verify(
+      token,
+      jwtConfig.forgotPasswordSecretKey
+    );
+    // Find Reset Token Record based on UUID from verified token
+    const findUserPasswordToken = await ForgetPasswordToken.findOne({
+      where: {
+        token_uuid: verifyResetToken.tokenUUID,
+      },
+    });
+    // Handle Invalid or Expired Token
+    if (!findUserPasswordToken || new Date() > verifyResetToken.expiresAt) {
+      return res.json(errorResponse("INVALID_RESET_TOKEN"));
+    }
+    const userDetails = await User.findOne({
+      where: { email: verifyResetToken.email },
+    });
+    if (!userDetails) {
+      res.json(
+        errorResponse(
+          "USER_NOT_FOUND",
+          httpsStatusCodes.NOT_FOUND,
+          httpResponses.NOT_FOUND
+        )
+      );
+    }
+    // Handle Password Mismatch
+    if (password !== confirmPassword) {
+      return failure(
+        "PASSWORD_AND_CONFIRM_PASSWORD_SHOULD_BE_MATCH",
+        httpsStatusCodes.BAD_REQUEST,
+        httpResponses.BAD_REQUEST
+      );
+    }
+    // Hash the New Password
+    const hashPass = await generateHash(password);
+    // update password to hash password
+    userDetails.password = hashPass;
+    await userDetails.save({ fields: ["password"] }); // Update only the password field
+    // Delete the used token
+    await ForgetPasswordToken.destroy({
+      where: { token_uuid: verifyResetToken.tokenUUID },
+    });
+    // Success Response
+    return res.json(
+      successResponse(
+        "",
+        "PASSWORD_CHANGED_SUCCESSFULLY",
+        httpsStatusCodes.SUCCESS,
+        httpResponses.SUCCESS
+      )
+    );
+  } catch (error) {
+    return res.json(
+      errorResponse(
+        "SOME_THING_WENT_WRONG_WHILE_RESET_PASSWORD",
+        httpsStatusCodes.INTERNAL_SERVER_ERROR,
+        httpResponses.INTERNAL_SERVER_ERROR
+      )
+    );
+  }
+};
+
+module.exports = { signUp, login, forgotPassword, resetPassword };

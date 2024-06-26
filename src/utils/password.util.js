@@ -2,4 +2,6 @@ const bcrypt = require("bcrypt");
 
 const generateHash = (str) => bcrypt.hash(str, 10);
 
-module.exports = { generateHash };
+const comparePassword = (str, hash) => bcrypt.compare(str, hash);
+
+module.exports = { generateHash, comparePassword };
