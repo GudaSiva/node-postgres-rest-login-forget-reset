@@ -46,6 +46,38 @@ const signUp = async (req, res, next) => {
       updated_at: userCreate.updated_at,
       created_at: userCreate.created_at,
     };
+    // Generate JWT Token for Influencer
+    const jwtToken = jwt.sign(
+      {
+        email: responseData.email,
+        id: responseData.id,
+      },
+      jwtConfig.jwtSecret,
+      { expiresIn: jwtConfig.tokenExpiration }
+    );
+
+    // Construct Email Subject and Template
+    const subject = "Registered Successfully";
+    let signUpTemplate = fs.readFileSync(
+      "resources/views/template/sign-up.template.html",
+      "utf8"
+    );
+
+    // Personalize Email Template with User Information
+    signUpTemplate = signUpTemplate.replaceAll("##first_name##", first_name);
+    signUpTemplate = signUpTemplate.replaceAll("##last_name##", last_name);
+    signUpTemplate = signUpTemplate.replaceAll("##email##", email);
+    signUpTemplate = signUpTemplate.replaceAll(
+      "##password##",
+      password // Include password might be a security risk, consider omitting
+    );
+    signUpTemplate = signUpTemplate.replaceAll(
+      "##token##",
+      `/verify-email?token=${jwtToken}`
+    );
+
+    // Send Registration Email with Verification Link
+    await sendEmail(email, subject, signUpTemplate);
     return res.json(
       successResponse(
         responseData,
@@ -80,6 +112,9 @@ const login = async (req, res, next) => {
           httpResponses.NOT_FOUND
         )
       );
+    }
+    if (!userDetails.is_email_verified) {
+      return res.json(errorResponse("EMAIL_IS_NOT_VERIFIED"));
     }
     const jwtToken = jwt.sign(
       {
@@ -291,4 +326,53 @@ const resetPassword = async (req, res, next) => {
   }
 };
 
-module.exports = { signUp, login, forgotPassword, resetPassword };
+const verifyEmail = async (req, res, next) => {
+  try {
+    const { token } = req.body;
+    // Verify email verification token
+    const verifyToken = jwt.verify(token, jwtConfig.jwtSecret);
+    if (!verifyToken) {
+      return res.json(
+        "INVALID_VERIFY_TOKEN",
+        httpsStatusCodes.UNAUTHORIZED,
+        httpResponses.UNAUTHORIZED
+      );
+    }
+    // Check if user is already verified (ideally shouldn't be using token)
+    const findUserDetails = await User.findOne({
+      where: { email: verifyToken.email, is_email_verified: true },
+    });
+    if (findUserDetails) {
+      return res.json(errorResponse("EMAIL_ALREADY_VERIFIED"));
+    }
+    // Update user email verification status within the transaction
+    await User.update(
+      { is_email_verified: true },
+      {
+        where: { email: verifyToken.email },
+        returning: true,
+        plain: true,
+        raw: true,
+      }
+    );
+    return res.json(
+      successResponse(
+        "",
+        "EMAIL_SUCCESSFULLY_VERIFIED",
+        httpsStatusCodes.SUCCESS,
+        httpResponses.SUCCESS
+      )
+    );
+  } catch (error) {
+    return res.json(
+      errorResponse(
+        error ? error.message : "SOME_ERR_OCCUR_WHILE_VERIFY_EMAIL",
+        httpsStatusCodes.INTERNAL_SERVER_ERROR,
+        httpResponses.INTERNAL_SERVER_ERROR,
+        error
+      )
+    );
+  }
+};
+
+module.exports = { signUp, login, forgotPassword, resetPassword, verifyEmail };

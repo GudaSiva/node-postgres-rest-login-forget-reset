@@ -71,9 +71,18 @@ const resetPasswordSchema = joi.object({
     "any.only": "CONFIRM_PASSWORD_DOES_NOT_MATCH_PASSWORD",
   }),
 });
+
+const verifyEmailSchema = joi.object({
+  token: joi.string().required().messages({
+    "string.base": "TOKEN_REQUIRED",
+    "string.empty": "TOKEN_REQUIRED",
+    "any.required": "TOKEN_REQUIRED",
+  }),
+})
 module.exports = {
   signUpSchema,
   loginSchema,
   forgetPasswordSchema,
   resetPasswordSchema,
+  verifyEmailSchema
 };

@@ -4,6 +4,7 @@ const {
   login,
   forgotPassword,
   resetPassword,
+  verifyEmail,
 } = require("../../../../controllers");
 const { validateInput } = require("../../../../utils/validate.util");
 const {
@@ -11,8 +12,11 @@ const {
   loginSchema,
   forgetPasswordSchema,
   resetPasswordSchema,
+  verifyEmailSchema,
 } = require("../../../../validations/auth.validation");
-const { isAuthentication } = require("../../../../middlewares/authentication-middleware");
+const {
+  isAuthentication,
+} = require("../../../../middlewares/authentication-middleware");
 const router = express.Router();
 router.post("/sign-up", validateInput(signUpSchema), signUp);
 router.post("/log-in", validateInput(loginSchema), login);
@@ -27,4 +31,5 @@ router.post(
   validateInput(resetPasswordSchema),
   resetPassword
 );
+router.post("/email-verify", validateInput(verifyEmailSchema), verifyEmail);
 module.exports = router;
